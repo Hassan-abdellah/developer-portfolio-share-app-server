@@ -20,4 +20,37 @@ model User {
   name      String?
   avatar    String?
   createdAt DateTime @default(now())
+  profile Profile?
+}
+
+// ========== Profile ===========
+
+model Profile {
+  id Int @unique @id @default(autoincrement())
+  title String @db.VarChar(50)
+  description String @db.VarChar(100)
+  csv_url String?
+  skills String[]
+  is_sharable Boolean? @default(false)
+  userId String @unique
+  user User @relation(fields: [userId],references: [id])
+  link SocialLink[]
+}
+
+// ========== Links ===========
+
+
+enum Platform {
+  youtube
+  linkedin
+  github
+  others
+}
+
+model SocialLink {
+  id Int @unique @id @default(autoincrement())
+  link_type Platform 
+  link_url String
+  profileId Int 
+  profile Profile @relation(fields: [profileId],references: [id])
 }
