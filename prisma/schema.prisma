@@ -32,8 +32,8 @@ model Profile {
   csv_url String?
   skills String[]
   is_sharable Boolean? @default(false)
-  userId String @unique
-  user User @relation(fields: [userId],references: [id])
+  clerkId String @unique
+  user User @relation(fields: [clerkId],references: [clerkId])
   links SocialLink[]
 }
 

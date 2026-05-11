@@ -1,9 +1,10 @@
 import { type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
 import { prisma } from "../lib/prisma";
+import { Platform } from "../generated/prisma/enums";
 
 type linkType = {
-  link_type: string;
+  link_type: Platform;
   link_url: string;
 };
 
@@ -17,11 +18,11 @@ export const createProfile = async (req: Request, res: Response) => {
   try {
     //   desturcutre the body of the request
 
-    const { title, description, skills, links } = req.body();
+    const { title, description, skills, links } = req.body;
 
     await prisma.profile.create({
       data: {
-        userId: clerkId,
+        clerkId: clerkId,
         title,
         description,
         skills,
@@ -37,12 +38,13 @@ export const createProfile = async (req: Request, res: Response) => {
         },
       },
       include: {
-        links,
+        links: true,
       },
     });
 
     res.status(201).json({ status: true, message: "Created Successfully" });
   } catch (error) {
+    console.log("error", error);
     return res.status(500).json({ error: error });
   }
 };
