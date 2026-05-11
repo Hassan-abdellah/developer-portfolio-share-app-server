@@ -34,7 +34,7 @@ model Profile {
   is_sharable Boolean? @default(false)
   userId String @unique
   user User @relation(fields: [userId],references: [id])
-  link SocialLink[]
+  links SocialLink[]
 }
 
 // ========== Links ===========
