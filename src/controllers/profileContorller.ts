@@ -8,6 +8,16 @@ type linkType = {
   link_url: string;
 };
 
+interface profileBodyData {
+  title: string;
+  description: string;
+  skills: string[];
+  links: linkType[];
+}
+interface profileShareBody {
+  is_sharable: boolean;
+}
+
 // create profile
 export const createProfile = async (req: Request, res: Response) => {
   const { userId: clerkId } = getAuth(req);
@@ -18,7 +28,13 @@ export const createProfile = async (req: Request, res: Response) => {
   try {
     //   desturcutre the body of the request
 
-    const { title, description, skills, links } = req.body;
+    const { title, description, skills, links } = req.body as profileBodyData;
+
+    if (!req.body) {
+      return res
+        .status(401)
+        .json({ status: false, message: "No Body Provided" });
+    }
 
     await prisma.profile.create({
       data: {
@@ -44,7 +60,181 @@ export const createProfile = async (req: Request, res: Response) => {
 
     res.status(201).json({ status: true, message: "Created Successfully" });
   } catch (error) {
-    console.log("error", error);
+    return res.status(500).json({ error: error });
+  }
+};
+
+// update profile
+export const updateProfile = async (req: Request, res: Response) => {
+  const { userId: clerkId } = getAuth(req);
+  if (!clerkId) {
+    return res.status(401).json({ status: false, message: "unauthenticated" });
+  }
+
+  try {
+    const profileId = Number(req.params.id);
+    //   desturcutre the body of the request
+    const { title, description, skills, links } = req.body as profileBodyData;
+
+    if (!req.body) {
+      return res
+        .status(401)
+        .json({ status: false, message: "No Body Provided" });
+    }
+    // check if the profile already exists
+
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ status: false, message: "No Profile Found with that ID" });
+    }
+    await prisma.profile.update({
+      where: {
+        id: profileId,
+      },
+      data: {
+        clerkId: clerkId,
+        title,
+        description,
+        skills,
+        links: {
+          deleteMany: {},
+          createMany: {
+            data: links.map((item: linkType) => {
+              return {
+                link_type: item?.link_type,
+                link_url: item?.link_url,
+              };
+            }),
+          },
+        },
+      },
+      include: {
+        links: true,
+      },
+    });
+
+    res.status(200).json({ status: true, message: "Updated Successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error });
+  }
+};
+
+// get profile
+export const getProfile = async (req: Request, res: Response) => {
+  // const { userId: clerkId } = getAuth(req);
+  // if (!clerkId) {
+  //   return res.status(401).json({ status: false, message: "unauthenticated" });
+  // }
+
+  try {
+    const profileId = Number(req.params.id);
+    // check if the profile already exists
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      include: {
+        links: true,
+        user: true,
+      },
+    });
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ status: false, message: "No Profile Found with that ID" });
+    }
+
+    return res.status(200).json({ status: true, profile: profile });
+  } catch (error) {
+    return res.status(500).json({ error: error });
+  }
+};
+
+// share profile
+// to toggle Profile sharable ability on / off
+export const shareProfile = async (req: Request, res: Response) => {
+  const { userId: clerkId } = getAuth(req);
+  if (!clerkId) {
+    return res.status(401).json({ status: false, message: "unauthenticated" });
+  }
+
+  try {
+    const profileId = Number(req.params.id);
+    //   desturcutre the body of the request
+    const { is_sharable } = req.body as profileShareBody;
+
+    if (!req.body) {
+      return res
+        .status(401)
+        .json({ status: false, message: "No Body Provided" });
+    }
+    // check if the profile already exists
+
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ status: false, message: "No Profile Found with that ID" });
+    }
+    await prisma.profile.update({
+      where: {
+        id: profileId,
+      },
+      data: {
+        is_sharable: is_sharable,
+      },
+    });
+
+    res.status(200).json({ status: true, message: "Updated Successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error });
+  }
+};
+
+// upload  profile CSV
+// to toggle Profile sharable ability on / off
+export const uploadProfileCSV = async (req: Request, res: Response) => {
+  const { userId: clerkId } = getAuth(req);
+  if (!clerkId) {
+    return res.status(401).json({ status: false, message: "unauthenticated" });
+  }
+
+  try {
+    const profileId = Number(req.params.id);
+
+    // check if the profile already exists
+
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ status: false, message: "No Profile Found with that ID" });
+    }
+    const rawUrl = req.file?.path;
+    const pdfUrl = rawUrl?.replace("/image/upload/", "/raw/upload/");
+
+    const csvUrl = pdfUrl ? pdfUrl : profile.csv_url;
+
+    console.log("csvURL", csvUrl);
+    await prisma.profile.update({
+      where: {
+        id: profileId,
+      },
+      data: {
+        csv_url: csvUrl,
+      },
+    });
+
+    res
+      .status(200)
+      .json({ status: true, message: "CSV Uploaded Succesfully Successfully" });
+  } catch (error) {
     return res.status(500).json({ error: error });
   }
 };
