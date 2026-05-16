@@ -126,7 +126,7 @@ export const getProfileProjects = async (req: Request, res: Response) => {
     return res.status(401).json({ status: false, message: "unauthenticated" });
   }
   try {
-    const profile = prisma.profile.findUnique({
+    const profile = await prisma.profile.findUnique({
       where: { clerkId },
       include: { projects: true },
     });

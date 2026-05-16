@@ -159,6 +159,7 @@ export const getProfile = async (req: Request, res: Response) => {
       include: {
         links: true,
         user: true,
+        projects: true,
       },
     });
 
@@ -193,6 +194,7 @@ export const getMyProfile = async (req: Request, res: Response) => {
       include: {
         links: true,
         user: true,
+        projects: true,
       },
     });
 
