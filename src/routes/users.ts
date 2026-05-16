@@ -28,10 +28,10 @@ router.post(
       return;
     try {
       event = wh.verify(req.body, {
-        "svix-id": req.headers["svix-id"],
-        "svix-timestamp": req.headers["svix-timestamp"],
-        "svix-signature": req.headers["svix-signature"],
-      });
+        "svix-id": req.headers["svix-id"] as string,
+        "svix-timestamp": req.headers["svix-timestamp"] as string,
+        "svix-signature": req.headers["svix-signature"] as string,
+      }) as userWebhookType;
     } catch (err) {
       return res.status(400).json({ error: "Invalid webhook signature" });
     }
