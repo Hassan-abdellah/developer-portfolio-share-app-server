@@ -2,6 +2,7 @@ import express from "express";
 import {
   createProfile,
   deleteProfile,
+  getMyProfile,
   getProfile,
   shareProfile,
   updateProfile,
@@ -15,8 +16,12 @@ const router = express.Router();
 router.post("/", createProfile);
 // UPDATE Profile
 router.put("/:id", updateProfile);
+// GET My Profile
+router.get("/me", getMyProfile);
+
 // GET Profile
 router.get("/:id", getProfile);
+
 // UPDATE Profile sharable attribute
 router.put("/:id/share", shareProfile);
 // UPDATE Profile sharable attribute

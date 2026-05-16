@@ -35,6 +35,15 @@ export const createProfile = async (req: Request, res: Response) => {
         .status(401)
         .json({ status: false, message: "No Body Provided" });
     }
+    // get any profile with this clerk id first to ensusre the user has no profile
+    const profile = await prisma.profile.findUnique({ where: { clerkId } });
+    // if profile already exists with this clerk id return
+    if (profile) {
+      return res.status(401).json({
+        status: false,
+        message: "Profile For this user already exists",
+      });
+    }
 
     await prisma.profile.create({
       data: {
@@ -177,7 +186,6 @@ export const getMyProfile = async (req: Request, res: Response) => {
   if (!clerkId) {
     return res.status(401).json({ status: false, message: "unauthenticated" });
   }
-
   try {
     // check if the profile already exists
     const profile = await prisma.profile.findUnique({
