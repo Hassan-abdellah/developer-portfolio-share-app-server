@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createProfile,
+  deleteProfile,
   getProfile,
   shareProfile,
   updateProfile,
@@ -20,5 +21,7 @@ router.get("/:id", getProfile);
 router.put("/:id/share", shareProfile);
 // UPDATE Profile sharable attribute
 router.put("/:id/upload-csv", uploadPdf.single("pdf"), uploadProfileCSV);
+// DELETE Profile
+router.delete("/:id", deleteProfile);
 
 export default router;

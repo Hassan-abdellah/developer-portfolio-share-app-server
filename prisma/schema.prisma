@@ -20,21 +20,22 @@ model User {
   name      String?
   avatar    String?
   createdAt DateTime @default(now())
-  profile Profile?
+  profile   Profile?
 }
 
 // ========== Profile ===========
 
 model Profile {
-  id Int @unique @id @default(autoincrement())
-  title String @db.VarChar(50)
-  description String @db.VarChar(100)
-  csv_url String?
-  skills String[]
-  is_sharable Boolean? @default(false)
-  clerkId String @unique
-  user User @relation(fields: [clerkId],references: [clerkId])
-  links SocialLink[]
+  id            String    @id @default(uuid())
+  title         String    @db.VarChar(50)
+  description   String    @db.VarChar(100)
+  csv_url       String?
+  skills        String[]
+  is_sharable   Boolean?  @default(false)
+  clerkId       String    @unique
+  user          User      @relation(fields: [clerkId],references: [clerkId])
+  links         SocialLink[]
+  projects      Project[]
 }
 
 // ========== Links ===========
@@ -48,9 +49,23 @@ enum Platform {
 }
 
 model SocialLink {
-  id Int @unique @id @default(autoincrement())
-  link_type Platform 
-  link_url String
-  profileId Int 
-  profile Profile @relation(fields: [profileId],references: [id])
+  id          Int       @unique @id @default(autoincrement())
+  link_type   Platform 
+  link_url    String
+  profileId   String 
+  profile     Profile   @relation(fields: [profileId],references: [id],onDelete: Cascade)
+}
+
+
+// ========== Projects ===========
+
+model Project {
+  id            String    @id @default(uuid())
+  title         String    @db.VarChar(50)
+  description   String    @db.VarChar(100)
+  preview_url   String?
+  image_url     String?
+  profileId     String
+  profile       Profile   @relation(fields: [profileId],references: [id],onDelete: Cascade)
+  
 }
