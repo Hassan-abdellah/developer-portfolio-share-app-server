@@ -3,10 +3,18 @@ import express from "express";
 import userRouter from "./routes/users.js";
 import profileRouter from "./routes/profiles.js";
 import projectRouter from "./routes/projects.js";
-import { clerkMiddleware, getAuth } from "@clerk/express";
+import { clerkMiddleware } from "@clerk/express";
 import cors from "cors";
-import { getProfile } from "./controllers/profileContorller.js";
-import { authMiddleware } from "./middlewares/authMiddleware.js";
+import rateLimit from "express-rate-limit";
+
+// rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window`
+  message: "Too many requests from this IP, please try again after 15 minutes",
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 const PORT = process.env.PORT || 8000;
 // initialize express
@@ -33,10 +41,8 @@ app.use("/webhooks/clerk", userRouter);
 
 // parse body
 app.use(express.json());
-
-// custom auth middleware
-
-// app.use(authMiddleware);
+// rate limit
+app.use(limiter);
 
 // profile routes
 app.use("/api/profiles", profileRouter);
