@@ -72,9 +72,16 @@ export const updateProfile = async (req: Request, res: Response) => {
   }
 
   try {
-    const profileId = Number(req.params.id);
+    const profileId = req.params.id as string;
+
     //   desturcutre the body of the request
     const { title, description, skills, links } = req.body as profileBodyData;
+
+    if (!profileId) {
+      return res
+        .status(401)
+        .json({ status: false, message: "No Body Provided" });
+    }
 
     if (!req.body) {
       return res
@@ -86,7 +93,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
     });
-    if (!profile) {
+    if (!profile || clerkId !== profile.clerkId) {
       return res
         .status(404)
         .json({ status: false, message: "No Profile Found with that ID" });
@@ -125,13 +132,18 @@ export const updateProfile = async (req: Request, res: Response) => {
 
 // get profile
 export const getProfile = async (req: Request, res: Response) => {
-  // const { userId: clerkId } = getAuth(req);
-  // if (!clerkId) {
-  //   return res.status(401).json({ status: false, message: "unauthenticated" });
-  // }
+  const { userId: clerkId } = getAuth(req);
+  if (!clerkId) {
+    return res.status(401).json({ status: false, message: "unauthenticated" });
+  }
 
   try {
-    const profileId = Number(req.params.id);
+    const profileId = req.params.id as string;
+
+    if (!profileId) {
+      return res.status(404).json({ status: false, message: "Undefeined ID" });
+    }
+
     // check if the profile already exists
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
@@ -140,10 +152,46 @@ export const getProfile = async (req: Request, res: Response) => {
         user: true,
       },
     });
+
     if (!profile) {
       return res
         .status(404)
         .json({ status: false, message: "No Profile Found with that ID" });
+    }
+    if (!profile.is_sharable) {
+      return res.status(403).json({
+        status: false,
+        message: "You don’t have the permission to View This Page",
+      });
+    }
+
+    return res.status(200).json({ status: true, profile: profile });
+  } catch (error) {
+    return res.status(500).json({ error: error });
+  }
+};
+// get profile
+// get my profile
+export const getMyProfile = async (req: Request, res: Response) => {
+  const { userId: clerkId } = getAuth(req);
+  if (!clerkId) {
+    return res.status(401).json({ status: false, message: "unauthenticated" });
+  }
+
+  try {
+    // check if the profile already exists
+    const profile = await prisma.profile.findUnique({
+      where: { clerkId },
+      include: {
+        links: true,
+        user: true,
+      },
+    });
+
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ status: false, message: "No Profile Assign To You" });
     }
 
     return res.status(200).json({ status: true, profile: profile });
@@ -161,7 +209,14 @@ export const shareProfile = async (req: Request, res: Response) => {
   }
 
   try {
-    const profileId = Number(req.params.id);
+    const profileId = req.params.id as string;
+
+    if (!profileId) {
+      return res
+        .status(401)
+        .json({ status: false, message: "No Body Provided" });
+    }
+
     //   desturcutre the body of the request
     const { is_sharable } = req.body as profileShareBody;
 
@@ -175,7 +230,7 @@ export const shareProfile = async (req: Request, res: Response) => {
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
     });
-    if (!profile) {
+    if (!profile || clerkId !== profile.clerkId) {
       return res
         .status(404)
         .json({ status: false, message: "No Profile Found with that ID" });
@@ -204,14 +259,20 @@ export const uploadProfileCSV = async (req: Request, res: Response) => {
   }
 
   try {
-    const profileId = Number(req.params.id);
+    const profileId = req.params.id as string;
+
+    if (!profileId) {
+      return res
+        .status(401)
+        .json({ status: false, message: "No Body Provided" });
+    }
 
     // check if the profile already exists
 
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
     });
-    if (!profile) {
+    if (!profile || clerkId !== profile.clerkId) {
       return res
         .status(404)
         .json({ status: false, message: "No Profile Found with that ID" });
@@ -234,6 +295,39 @@ export const uploadProfileCSV = async (req: Request, res: Response) => {
     res
       .status(200)
       .json({ status: true, message: "CSV Uploaded Succesfully Successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: error });
+  }
+};
+
+// DELETE Profile
+export const deleteProfile = async (req: Request, res: Response) => {
+  const { userId: clerkId } = getAuth(req);
+  if (!clerkId) {
+    return res.status(401).json({ status: false, message: "unauthenticated" });
+  }
+
+  try {
+    const profileId = req.params.id as string;
+    if (!profileId) {
+      return res.status(404).json({ message: "undefined ID" });
+    }
+    // check if the profile already exists
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+    if (!profile || clerkId !== profile.clerkId) {
+      return res
+        .status(404)
+        .json({ status: false, message: "No Profile Found with that ID" });
+    }
+    // check if the profile already exists
+    await prisma.profile.delete({
+      where: { id: profileId },
+    });
+    return res
+      .status(200)
+      .json({ status: true, message: "Deleted Successfully" });
   } catch (error) {
     return res.status(500).json({ error: error });
   }
