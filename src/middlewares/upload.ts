@@ -5,7 +5,7 @@ import cloudinary from "../config/cloudinary";
 const imageStorage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "my-app/images",
+    folder: "dev-portofolio-share-app/projects/images",
     allowed_formats: ["jpg", "jpeg", "png", "gif", "webp"],
     transformation: [{ width: 1000, crop: "limit" }],
   } as object,
@@ -14,7 +14,7 @@ const imageStorage = new CloudinaryStorage({
 const pdfStorage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "csv_files",
+    folder: "dev-portofolio-share-app/profiles/csv_files",
     allowed_formats: ["pdf"],
     resource_type: "auto", // required for non-image files
   } as object,
