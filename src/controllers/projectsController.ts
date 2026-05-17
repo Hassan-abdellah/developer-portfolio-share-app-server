@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
-import { getAuth } from "@clerk/express";
 import { prisma } from "../lib/prisma";
+import { requireAuth } from "../utils/authUtils";
+import { isRequestParamsMissing } from "../utils/requestUtils";
 
 interface projectTypeData {
   title: string;
@@ -12,22 +13,17 @@ interface projectTypeData {
 
 // create porject
 export const createProject = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  if (!req.body) {
+    return res.status(400).json({ status: false, message: "No Body Provided" });
   }
-
   try {
     //   desturcutre the body of the request
 
     const { title, description, image, preview_url, profile_id } =
       req.body as projectTypeData;
 
-    if (!req.body) {
-      return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
-    }
     // For File Upload
     const rawUrl = req.file?.path;
     const image_url = rawUrl ? rawUrl : "";
@@ -61,28 +57,21 @@ export const createProject = async (req: Request, res: Response) => {
 
 // update project
 export const updateProject = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const projectId = isRequestParamsMissing(req, res, "Project");
+  if (!projectId) return;
+
+  if (!req.body) {
+    return res.status(400).json({ status: false, message: "No Body Provided" });
   }
 
   try {
-    const projectId = req.params.id as string;
-
-    if (!projectId) {
-      return res
-        .status(401)
-        .json({ status: false, message: "No Project Id Provided" });
-    }
     //   desturcutre the body of the request
     const { title, description, image, preview_url, profile_id } =
       req.body as projectTypeData;
-
-    if (!req.body) {
-      return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
-    }
 
     // check if the profile already exists
 
@@ -121,10 +110,10 @@ export const updateProject = async (req: Request, res: Response) => {
 
 // get All projects for profile
 export const getProfileProjects = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
-  }
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+
   try {
     const profile = await prisma.profile.findUnique({
       where: { clerkId },
@@ -144,17 +133,14 @@ export const getProfileProjects = async (req: Request, res: Response) => {
 
 // get project
 export const getProject = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
-  }
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const projectId = isRequestParamsMissing(req, res, "Project");
+  if (!projectId) return;
 
   try {
-    const projectId = req.params.id as string;
-
-    if (!projectId) {
-      return res.status(404).json({ message: "undefined ID" });
-    }
     // check if the profile already exists
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -175,16 +161,14 @@ export const getProject = async (req: Request, res: Response) => {
 };
 // DELETE project
 export const deleteProject = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
-  }
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const projectId = isRequestParamsMissing(req, res, "Project");
+  if (!projectId) return;
 
   try {
-    const projectId = req.params.id as string;
-    if (!projectId) {
-      return res.status(404).json({ message: "undefined ID" });
-    }
     // check if the profile already exists
     const project = await prisma.project.findUnique({
       where: { id: projectId },

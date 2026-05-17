@@ -1,7 +1,8 @@
 import { type Request, type Response } from "express";
-import { getAuth } from "@clerk/express";
 import { prisma } from "../lib/prisma";
 import { Platform } from "../generated/prisma/enums";
+import { requireAuth } from "../utils/authUtils";
+import { isRequestParamsMissing } from "../utils/requestUtils";
 
 type linkType = {
   link_type: Platform;
@@ -18,22 +19,39 @@ interface profileShareBody {
   is_sharable: boolean;
 }
 
-// create profile
-export const createProfile = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
+/** Find a profile by id and verify ownership. Returns null and sends response on failure. */
+async function findOwnedProfile(
+  profileId: string,
+  clerkId: string,
+  res: Response,
+) {
+  const profile = await prisma.profile.findUnique({ where: { id: profileId } });
+
+  if (!profile) {
+    res.status(404).json({ status: false, message: "Profile not found" });
+    return null;
   }
 
+  if (profile.clerkId !== clerkId) {
+    res.status(403).json({ status: false, message: "Forbidden" });
+    return null;
+  }
+
+  return profile;
+}
+
+// create profile
+export const createProfile = async (req: Request, res: Response) => {
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
   try {
-    //   desturcutre the body of the request
-
+    //desturcutre the body of the request
     const { title, description, skills, links } = req.body as profileBodyData;
-
-    if (!req.body) {
+    // check if those fields not appiled in the body
+    if (!title || !description || !skills || !links) {
       return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
+        .status(400)
+        .json({ status: false, message: "Missing required fields" });
     }
     // get any profile with this clerk id first to ensusre the user has no profile
     const profile = await prisma.profile.findUnique({ where: { clerkId } });
@@ -69,44 +87,36 @@ export const createProfile = async (req: Request, res: Response) => {
 
     res.status(201).json({ status: true, message: "Created Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 // update profile
 export const updateProfile = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
-  }
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const profileId = isRequestParamsMissing(req, res, "Profile");
+  if (!profileId) return;
 
   try {
-    const profileId = req.params.id as string;
-
     //   desturcutre the body of the request
     const { title, description, skills, links } = req.body as profileBodyData;
 
-    if (!profileId) {
+    // check if those fields not appiled in the body
+    if (!title || !description || !skills || !links) {
       return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
+        .status(400)
+        .json({ status: false, message: "Missing required fields" });
     }
 
-    if (!req.body) {
-      return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
-    }
     // check if the profile already exists
 
-    const profile = await prisma.profile.findUnique({
-      where: { id: profileId },
-    });
-    if (!profile || clerkId !== profile.clerkId) {
-      return res
-        .status(404)
-        .json({ status: false, message: "No Profile Found with that ID" });
-    }
+    const profile = await findOwnedProfile(profileId, clerkId, res);
+    if (!profile) return;
+
+    // update the profile
     await prisma.profile.update({
       where: {
         id: profileId,
@@ -135,24 +145,20 @@ export const updateProfile = async (req: Request, res: Response) => {
 
     res.status(200).json({ status: true, message: "Updated Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 // get profile
 export const getProfile = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
-  }
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const profileId = isRequestParamsMissing(req, res, "Profile");
+  if (!profileId) return;
 
   try {
-    const profileId = req.params.id as string;
-
-    if (!profileId) {
-      return res.status(404).json({ status: false, message: "Undefeined ID" });
-    }
-
     // check if the profile already exists
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
@@ -177,16 +183,14 @@ export const getProfile = async (req: Request, res: Response) => {
 
     return res.status(200).json({ status: true, profile: profile });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 // get profile
 // get my profile
 export const getMyProfile = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
-  }
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
   try {
     // check if the profile already exists
     const profile = await prisma.profile.findUnique({
@@ -206,45 +210,34 @@ export const getMyProfile = async (req: Request, res: Response) => {
 
     return res.status(200).json({ status: true, profile: profile });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 // share profile
 // to toggle Profile sharable ability on / off
 export const shareProfile = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const profileId = isRequestParamsMissing(req, res, "Profile");
+  if (!profileId) return;
+
+  if (!req.body) {
+    return res.status(400).json({ status: false, message: "No Body Provided" });
   }
 
   try {
-    const profileId = req.params.id as string;
-
-    if (!profileId) {
-      return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
-    }
-
     //   desturcutre the body of the request
     const { is_sharable } = req.body as profileShareBody;
 
-    if (!req.body) {
-      return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
-    }
     // check if the profile already exists
 
-    const profile = await prisma.profile.findUnique({
-      where: { id: profileId },
-    });
-    if (!profile || clerkId !== profile.clerkId) {
-      return res
-        .status(404)
-        .json({ status: false, message: "No Profile Found with that ID" });
-    }
+    const profile = await findOwnedProfile(profileId, clerkId, res);
+    if (!profile) return;
+
+    // update the profile
     await prisma.profile.update({
       where: {
         id: profileId,
@@ -256,43 +249,32 @@ export const shareProfile = async (req: Request, res: Response) => {
 
     res.status(200).json({ status: true, message: "Updated Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 // upload  profile CSV
 // to toggle Profile sharable ability on / off
 export const uploadProfileCSV = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const profileId = isRequestParamsMissing(req, res, "Profile");
+  if (!profileId) return;
+
+  if (!req.file?.path) {
+    return res.status(400).json({ status: false, message: "No file uploaded" });
   }
 
   try {
-    const profileId = req.params.id as string;
-
-    if (!profileId) {
-      return res
-        .status(401)
-        .json({ status: false, message: "No Body Provided" });
-    }
-
     // check if the profile already exists
+    const profile = await findOwnedProfile(profileId, clerkId, res);
+    if (!profile) return;
 
-    const profile = await prisma.profile.findUnique({
-      where: { id: profileId },
-    });
-    if (!profile || clerkId !== profile.clerkId) {
-      return res
-        .status(404)
-        .json({ status: false, message: "No Profile Found with that ID" });
-    }
-    const rawUrl = req.file?.path;
-    const pdfUrl = rawUrl?.replace("/image/upload/", "/raw/upload/");
-
-    const csvUrl = pdfUrl ? pdfUrl : profile.csv_url;
-
-    console.log("csvURL", csvUrl);
+    // Cloudinary stores CSVs under /raw/upload/, not /image/upload/
+    const csvUrl = req.file.path.replace("/image/upload/", "/raw/upload/");
+    // update profile
     await prisma.profile.update({
       where: {
         id: profileId,
@@ -306,32 +288,25 @@ export const uploadProfileCSV = async (req: Request, res: Response) => {
       .status(200)
       .json({ status: true, message: "CSV Uploaded Succesfully Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 // DELETE Profile
 export const deleteProfile = async (req: Request, res: Response) => {
-  const { userId: clerkId } = getAuth(req);
-  if (!clerkId) {
-    return res.status(401).json({ status: false, message: "unauthenticated" });
-  }
+  // check if the clerk id is presented in request
+  const clerkId = requireAuth(req, res);
+  if (!clerkId) return;
+  // check if the Id is Presented in the URL params or not
+  const profileId = isRequestParamsMissing(req, res, "Profile");
+  if (!profileId) return;
 
   try {
-    const profileId = req.params.id as string;
-    if (!profileId) {
-      return res.status(404).json({ message: "undefined ID" });
-    }
     // check if the profile already exists
-    const profile = await prisma.profile.findUnique({
-      where: { id: profileId },
-    });
-    if (!profile || clerkId !== profile.clerkId) {
-      return res
-        .status(404)
-        .json({ status: false, message: "No Profile Found with that ID" });
-    }
-    // check if the profile already exists
+    const profile = await findOwnedProfile(profileId, clerkId, res);
+    if (!profile) return;
+
+    // delete the profile
     await prisma.profile.delete({
       where: { id: profileId },
     });
@@ -339,6 +314,6 @@ export const deleteProfile = async (req: Request, res: Response) => {
       .status(200)
       .json({ status: true, message: "Deleted Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
