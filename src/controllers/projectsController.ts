@@ -51,7 +51,7 @@ export const createProject = async (req: Request, res: Response) => {
 
     res.status(201).json({ status: true, message: "Created Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -104,7 +104,7 @@ export const updateProject = async (req: Request, res: Response) => {
 
     res.status(200).json({ status: true, message: "Updated Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -127,7 +127,7 @@ export const getProfileProjects = async (req: Request, res: Response) => {
 
     return res.status(200).json({ status: true, projects: profile.projects });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -156,7 +156,7 @@ export const getProject = async (req: Request, res: Response) => {
 
     return res.status(200).json({ status: true, project });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 // DELETE project
@@ -191,6 +191,6 @@ export const deleteProject = async (req: Request, res: Response) => {
       .status(200)
       .json({ status: true, message: "Deleted Successfully" });
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
